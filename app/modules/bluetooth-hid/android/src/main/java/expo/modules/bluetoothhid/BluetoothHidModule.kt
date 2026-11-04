@@ -184,7 +184,7 @@ class BluetoothHidModule : Module() {
           "Wireless Controller",
           "PlayStation Bluetooth Controller",
           "Sony/Hanmeini",
-          BluetoothHidDevice.SUBCLASS1_GAMEPAD,
+          BluetoothHidDevice.SUBCLASS2_GAMEPAD,
           HID_REPORT_DESCRIPTOR
         )
 
