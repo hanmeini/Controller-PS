@@ -1,0 +1,4 @@
+websockets>=12.0
+vgamepad>=0.3.3; platform_system == "Windows"
+pynput>=1.7.6
+colorama>=0.4.6

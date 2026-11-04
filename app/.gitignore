@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+.metro-health-check*
+*.tsbuildinfo
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+ios/

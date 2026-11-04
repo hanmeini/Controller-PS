@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+.expo-shared/
+.gradle/
+build/
+android/.gradle/
+android/app/build/
+android/build/
+*.log
+.DS_Store
+
+# Keep release APKs
+!releases/
+!releases/*.apk
