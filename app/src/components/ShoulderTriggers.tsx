@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
 import { ButtonName } from '../types/controller';
 
 interface ShoulderTriggersProps {
@@ -26,25 +26,43 @@ export const ShoulderTriggers: React.FC<ShoulderTriggersProps> = ({
   return (
     <View style={[styles.container, isLeft ? styles.alignLeft : styles.alignRight]}>
       {/* TRIGGER (L2 / R2) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn(triggerName)}
-        onPressOut={() => onPressOut(triggerName)}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn(triggerName);
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut(triggerName);
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut(triggerName);
+        }}
         style={[styles.triggerBtn, triggerActive && styles.triggerActive]}
       >
         <Text style={[styles.triggerText, triggerActive && styles.textActive]}>{triggerLabel}</Text>
         <View style={[styles.triggerRidge, triggerActive && styles.ridgeActive]} />
-      </TouchableOpacity>
+      </View>
 
-      {/* BUMPER (L1 / R1) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn(bumperName)}
-        onPressOut={() => onPressOut(bumperName)}
+      {/* BUMPER (L1 / R1) - Sprint di PES, dirancang untuk multi-touch simultan */}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn(bumperName);
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut(bumperName);
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut(bumperName);
+        }}
         style={[styles.bumperBtn, bumperActive && styles.bumperActive]}
       >
         <Text style={[styles.bumperText, bumperActive && styles.textActive]}>{bumperLabel}</Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -52,7 +70,7 @@ export const ShoulderTriggers: React.FC<ShoulderTriggersProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'center',
   },
   alignLeft: {
@@ -62,12 +80,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   triggerBtn: {
-    width: 90,
-    height: 44,
+    width: 95,
+    height: 46,
     backgroundColor: '#1b1f2b',
     borderWidth: 1.5,
     borderColor: '#2e3549',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -82,7 +100,7 @@ const styles = StyleSheet.create({
   triggerRidge: {
     position: 'absolute',
     bottom: 3,
-    width: 40,
+    width: 44,
     height: 3,
     backgroundColor: '#30374d',
     borderRadius: 2,
@@ -91,18 +109,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#00e5ff',
   },
   triggerText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#8b94ab',
     letterSpacing: 1,
   },
   bumperBtn: {
-    width: 80,
-    height: 44,
+    width: 95,
+    height: 46,
     backgroundColor: '#222736',
     borderWidth: 1.5,
     borderColor: '#353c52',
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -110,10 +128,11 @@ const styles = StyleSheet.create({
   bumperActive: {
     backgroundColor: '#1d395a',
     borderColor: '#00e5ff',
+    borderWidth: 2,
     transform: [{ scale: 0.95 }],
   },
   bumperText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#a3adcb',
     letterSpacing: 1,

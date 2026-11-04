@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { ButtonName } from '../types/controller';
 
 interface ActionButtonsProps {
@@ -20,14 +20,23 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {/* Background Circular Plate */}
+      {/* Background Circular Plate (Diperbesar) */}
       <View style={styles.plate} />
 
-      {/* TRIANGLE (Top) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('triangle')}
-        onPressOut={() => onPressOut('triangle')}
+      {/* TRIANGLE (Atas - Terobos di PES) */}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('triangle');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('triangle');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('triangle');
+        }}
         style={[
           styles.button,
           styles.btnTriangle,
@@ -37,13 +46,22 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         <Text style={[styles.symbol, styles.symTriangle, activeButtons.triangle && styles.symActive]}>
           ▲
         </Text>
-      </TouchableOpacity>
+      </View>
 
-      {/* CIRCLE (Right) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('circle')}
-        onPressOut={() => onPressOut('circle')}
+      {/* CIRCLE (Kanan - Crossing / Sliding di PES) */}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('circle');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('circle');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('circle');
+        }}
         style={[
           styles.button,
           styles.btnCircle,
@@ -53,13 +71,22 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         <Text style={[styles.symbol, styles.symCircle, activeButtons.circle && styles.symActive]}>
           ●
         </Text>
-      </TouchableOpacity>
+      </View>
 
-      {/* CROSS (Bottom) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('cross')}
-        onPressOut={() => onPressOut('cross')}
+      {/* CROSS (Bawah - Operan / Pressing di PES) */}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('cross');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('cross');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('cross');
+        }}
         style={[
           styles.button,
           styles.btnCross,
@@ -69,13 +96,22 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         <Text style={[styles.symbol, styles.symCross, activeButtons.cross && styles.symActive]}>
           ✕
         </Text>
-      </TouchableOpacity>
+      </View>
 
-      {/* SQUARE (Left) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('square')}
-        onPressOut={() => onPressOut('square')}
+      {/* SQUARE (Kiri - Tendang / Shoot di PES) */}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('square');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('square');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('square');
+        }}
         style={[
           styles.button,
           styles.btnSquare,
@@ -85,13 +121,13 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         <Text style={[styles.symbol, styles.symSquare, activeButtons.square && styles.symActive]}>
           ■
         </Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
-const SIZE = 160;
-const BTN_SIZE = 50;
+const SIZE = 195;
+const BTN_SIZE = 58;
 
 const styles = StyleSheet.create({
   container: {
@@ -107,7 +143,7 @@ const styles = StyleSheet.create({
     height: SIZE,
     borderRadius: SIZE / 2,
     backgroundColor: '#161922',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#262a38',
   },
   button: {
@@ -118,28 +154,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#222634',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
     shadowRadius: 4,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#2d3345',
   },
   btnTriangle: {
-    top: 4,
+    top: 6,
   },
   btnCircle: {
-    right: 4,
+    right: 6,
   },
   btnCross: {
-    bottom: 4,
+    bottom: 6,
   },
   btnSquare: {
-    left: 4,
+    left: 6,
   },
   symbol: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: 'bold',
   },
   symTriangle: {
@@ -160,25 +196,25 @@ const styles = StyleSheet.create({
   btnTriangleActive: {
     backgroundColor: '#0a3d24',
     borderColor: '#00e676',
-    borderWidth: 2,
-    transform: [{ scale: 0.94 }],
+    borderWidth: 2.5,
+    transform: [{ scale: 0.93 }],
   },
   btnCircleActive: {
     backgroundColor: '#441408',
     borderColor: '#ff3d00',
-    borderWidth: 2,
-    transform: [{ scale: 0.94 }],
+    borderWidth: 2.5,
+    transform: [{ scale: 0.93 }],
   },
   btnCrossActive: {
     backgroundColor: '#092754',
     borderColor: '#2979ff',
-    borderWidth: 2,
-    transform: [{ scale: 0.94 }],
+    borderWidth: 2.5,
+    transform: [{ scale: 0.93 }],
   },
   btnSquareActive: {
     backgroundColor: '#42071d',
     borderColor: '#f50057',
-    borderWidth: 2,
-    transform: [{ scale: 0.94 }],
+    borderWidth: 2.5,
+    transform: [{ scale: 0.93 }],
   },
 });

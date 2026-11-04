@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, SafeAreaView, Platform } from 'react-native';
+import { StyleSheet, View, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
@@ -22,7 +22,6 @@ export default function App() {
     targetDevice,
     serverIp,
     pingMs,
-    playerNumber,
     playerColor,
     setMode,
     pressButton,
@@ -49,9 +48,7 @@ export default function App() {
     async function lockOrientation() {
       try {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      } catch (e) {
-        // Fallback for dev / web
-      }
+      } catch (e) {}
     }
     lockOrientation();
   }, []);
@@ -67,7 +64,7 @@ export default function App() {
       <View style={styles.controllerBody}>
         {/* TOP ROW: SHOULDER TRIGGERS & TOUCHPAD */}
         <View style={styles.topRow}>
-          {/* LEFT TRIGGERS (L1, L2) */}
+          {/* LEFT BUMPERS (L2 & L1) */}
           <ShoulderTriggers
             side="left"
             onPressIn={pressButton}
@@ -84,7 +81,7 @@ export default function App() {
             playerColor={playerColor}
           />
 
-          {/* RIGHT TRIGGERS (R1, R2) */}
+          {/* RIGHT BUMPERS (R1 & R2) - R1 untuk Sprint di PES */}
           <ShoulderTriggers
             side="right"
             onPressIn={pressButton}
@@ -94,22 +91,24 @@ export default function App() {
           />
         </View>
 
-        {/* MAIN CONTROLS ROW */}
+        {/* MAIN GAMEPLAY AREA: VERTICAL DUALSHOCK STACK */}
         <View style={styles.mainControlsRow}>
-          {/* LEFT SIDE: D-PAD & LEFT ANALOG */}
-          <View style={styles.leftControlWing}>
-            <DPad
-              onPressIn={pressButton}
-              onPressOut={releaseButton}
-              activeButtons={{
-                dpad_up: buttons.dpad_up,
-                dpad_down: buttons.dpad_down,
-                dpad_left: buttons.dpad_left,
-                dpad_right: buttons.dpad_right,
-              }}
-            />
+          {/* LEFT WING: D-PAD DI ATAS, ANALOG L3 DI BAWAHNYA */}
+          <View style={styles.verticalLeftWing}>
+            <View style={styles.dpadBox}>
+              <DPad
+                onPressIn={pressButton}
+                onPressOut={releaseButton}
+                activeButtons={{
+                  dpad_up: buttons.dpad_up,
+                  dpad_down: buttons.dpad_down,
+                  dpad_left: buttons.dpad_left,
+                  dpad_right: buttons.dpad_right,
+                }}
+              />
+            </View>
 
-            <View style={styles.stickWrapperLeft}>
+            <View style={styles.stickBoxLeft}>
               <AnalogStick
                 label="L3"
                 onMove={(x, y) => updateAxes({ lx: x, ly: y })}
@@ -121,7 +120,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* CENTER CONTROLS (SHARE, OPTIONS, PS BUTTON, STATUS) */}
+          {/* CENTER SECTION: SHARE, OPTIONS, STATUS & PS BUTTON */}
           <View style={styles.centerSection}>
             <CenterBar
               onPressIn={pressButton}
@@ -140,20 +139,22 @@ export default function App() {
             />
           </View>
 
-          {/* RIGHT SIDE: ACTION BUTTONS & RIGHT ANALOG */}
-          <View style={styles.rightControlWing}>
-            <ActionButtons
-              onPressIn={pressButton}
-              onPressOut={releaseButton}
-              activeButtons={{
-                triangle: buttons.triangle,
-                circle: buttons.circle,
-                cross: buttons.cross,
-                square: buttons.square,
-              }}
-            />
+          {/* RIGHT WING: TOMBOL AKSI DIPERBESAR DI ATAS, ANALOG R3 DI BAWAHNYA */}
+          <View style={styles.verticalRightWing}>
+            <View style={styles.actionButtonsBox}>
+              <ActionButtons
+                onPressIn={pressButton}
+                onPressOut={releaseButton}
+                activeButtons={{
+                  triangle: buttons.triangle,
+                  circle: buttons.circle,
+                  cross: buttons.cross,
+                  square: buttons.square,
+                }}
+              />
+            </View>
 
-            <View style={styles.stickWrapperRight}>
+            <View style={styles.stickBoxRight}>
               <AnalogStick
                 label="R3"
                 onMove={(x, y) => updateAxes({ rx: x, ry: y })}
@@ -198,15 +199,16 @@ const styles = StyleSheet.create({
   },
   controllerBody: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
     justifyContent: 'space-between',
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
+    marginBottom: 4,
   },
   mainControlsRow: {
     flex: 1,
@@ -214,28 +216,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  leftControlWing: {
-    flexDirection: 'row',
+  verticalLeftWing: {
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'space-between',
+    height: '100%',
+    paddingVertical: 4,
   },
-  rightControlWing: {
-    flexDirection: 'row',
+  dpadBox: {
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
   },
-  stickWrapperLeft: {
-    marginLeft: 6,
-    marginTop: 24,
+  stickBoxLeft: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
-  stickWrapperRight: {
-    marginRight: 6,
-    marginTop: 24,
+  verticalRightWing: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: '100%',
+    paddingVertical: 4,
+  },
+  actionButtonsBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stickBoxRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   centerSection: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
 });

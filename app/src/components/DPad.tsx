@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ButtonName } from '../types/controller';
 
@@ -23,50 +23,86 @@ export const DPad: React.FC<DPadProps> = ({ onPressIn, onPressOut, activeButtons
       <View style={styles.crossCenter} />
 
       {/* UP */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('dpad_up')}
-        onPressOut={() => onPressOut('dpad_up')}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('dpad_up');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_up');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_up');
+        }}
         style={[styles.button, styles.btnUp, activeButtons.dpad_up && styles.btnActive]}
       >
-        <Ionicons name="caret-up" size={26} color={activeButtons.dpad_up ? '#00e5ff' : '#a0a5b5'} />
-      </TouchableOpacity>
+        <Ionicons name="caret-up" size={28} color={activeButtons.dpad_up ? '#00e5ff' : '#a0a5b5'} />
+      </View>
 
       {/* RIGHT */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('dpad_right')}
-        onPressOut={() => onPressOut('dpad_right')}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('dpad_right');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_right');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_right');
+        }}
         style={[styles.button, styles.btnRight, activeButtons.dpad_right && styles.btnActive]}
       >
-        <Ionicons name="caret-forward" size={26} color={activeButtons.dpad_right ? '#00e5ff' : '#a0a5b5'} />
-      </TouchableOpacity>
+        <Ionicons name="caret-forward" size={28} color={activeButtons.dpad_right ? '#00e5ff' : '#a0a5b5'} />
+      </View>
 
       {/* DOWN */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('dpad_down')}
-        onPressOut={() => onPressOut('dpad_down')}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('dpad_down');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_down');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_down');
+        }}
         style={[styles.button, styles.btnDown, activeButtons.dpad_down && styles.btnActive]}
       >
-        <Ionicons name="caret-down" size={26} color={activeButtons.dpad_down ? '#00e5ff' : '#a0a5b5'} />
-      </TouchableOpacity>
+        <Ionicons name="caret-down" size={28} color={activeButtons.dpad_down ? '#00e5ff' : '#a0a5b5'} />
+      </View>
 
       {/* LEFT */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPressIn={() => onPressIn('dpad_left')}
-        onPressOut={() => onPressOut('dpad_left')}
+      <View
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onPressIn('dpad_left');
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_left');
+        }}
+        onTouchCancel={(e) => {
+          e.stopPropagation();
+          onPressOut('dpad_left');
+        }}
         style={[styles.button, styles.btnLeft, activeButtons.dpad_left && styles.btnActive]}
       >
-        <Ionicons name="caret-back" size={26} color={activeButtons.dpad_left ? '#00e5ff' : '#a0a5b5'} />
-      </TouchableOpacity>
+        <Ionicons name="caret-back" size={28} color={activeButtons.dpad_left ? '#00e5ff' : '#a0a5b5'} />
+      </View>
     </View>
   );
 };
 
-const SIZE = 160;
-const BTN_SIZE = 52;
+const SIZE = 170;
+const BTN_SIZE = 55;
 
 const styles = StyleSheet.create({
   container: {
@@ -82,7 +118,7 @@ const styles = StyleSheet.create({
     height: SIZE,
     backgroundColor: '#161922',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#262a38',
   },
   crossPlateHorizontal: {
@@ -91,15 +127,15 @@ const styles = StyleSheet.create({
     height: BTN_SIZE + 6,
     backgroundColor: '#161922',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#262a38',
   },
   crossCenter: {
     position: 'absolute',
-    width: BTN_SIZE - 6,
-    height: BTN_SIZE - 6,
+    width: BTN_SIZE - 4,
+    height: BTN_SIZE - 4,
     backgroundColor: '#1e2230',
-    borderRadius: (BTN_SIZE - 6) / 2,
+    borderRadius: (BTN_SIZE - 4) / 2,
     zIndex: 1,
   },
   button: {
@@ -111,7 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
     zIndex: 2,
-    elevation: 4,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.4,
@@ -140,7 +176,7 @@ const styles = StyleSheet.create({
   btnActive: {
     backgroundColor: '#1a3045',
     borderColor: '#00e5ff',
-    borderWidth: 1.5,
+    borderWidth: 2,
     transform: [{ scale: 0.94 }],
   },
 });

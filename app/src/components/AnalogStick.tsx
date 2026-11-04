@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, StyleSheet, PanResponder, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, PanResponder, Text } from 'react-native';
 import { ButtonName } from '../types/controller';
 
 interface AnalogStickProps {
@@ -11,9 +11,9 @@ interface AnalogStickProps {
   deadzone?: number;
 }
 
-const BASE_RADIUS = 60;
-const STICK_RADIUS = 30;
-const MAX_DISTANCE = BASE_RADIUS - 12;
+const BASE_RADIUS = 62;
+const STICK_RADIUS = 32;
+const MAX_DISTANCE = BASE_RADIUS - 14;
 
 export const AnalogStick: React.FC<AnalogStickProps> = ({
   label,
@@ -30,6 +30,7 @@ export const AnalogStick: React.FC<AnalogStickProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {},
       onPanResponderMove: (_, gestureState) => {
         let dx = gestureState.dx;
@@ -82,16 +83,23 @@ export const AnalogStick: React.FC<AnalogStickProps> = ({
             isClicked && styles.thumbstickClicked,
           ]}
         >
-          {/* Grip Texture */}
-          <View style={styles.stickCenterCap}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPressIn={() => onClick(buttonKey)}
-              onPressOut={() => onReleaseClick(buttonKey)}
-              style={styles.labelTouchArea}
-            >
-              <Text style={[styles.stickLabel, isClicked && styles.stickLabelActive]}>{label}</Text>
-            </TouchableOpacity>
+          {/* Grip Texture & L3/R3 Click */}
+          <View
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onClick(buttonKey);
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              onReleaseClick(buttonKey);
+            }}
+            onTouchCancel={(e) => {
+              e.stopPropagation();
+              onReleaseClick(buttonKey);
+            }}
+            style={styles.stickCenterCap}
+          >
+            <Text style={[styles.stickLabel, isClicked && styles.stickLabelActive]}>{label}</Text>
           </View>
         </View>
       </View>
@@ -145,23 +153,17 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.9 }],
   },
   stickCenterCap: {
-    width: (STICK_RADIUS - 6) * 2,
-    height: (STICK_RADIUS - 6) * 2,
-    borderRadius: STICK_RADIUS - 6,
+    width: (STICK_RADIUS - 5) * 2,
+    height: (STICK_RADIUS - 5) * 2,
+    borderRadius: STICK_RADIUS - 5,
     backgroundColor: '#1d2130',
     borderWidth: 1,
     borderColor: '#32394f',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  labelTouchArea: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   stickLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#7b839b',
   },
