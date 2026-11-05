@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Controller-PS - Multi-Player Laptop Receiver Server
+Controller-PS - Multi-Player Laptop Receiver Server v1.1
 Mendukung hingga 4 HP bermain bersamaan dalam 1 laptop (Player 1 - Player 4).
 Kompatibel dengan FIFA, PES, Overcooked, Tekken, Naruto, Emulator PS2/PS3, Steam, dll.
 """
@@ -10,6 +10,7 @@ import socket
 import json
 import asyncio
 import platform
+import os
 
 try:
     from colorama import init, Fore, Style
@@ -22,12 +23,17 @@ except ImportError:
 
 # Deteksi dukungan vgamepad (Virtual Gamepad untuk Windows)
 HAS_VGAMEPAD = False
+VGAMEPAD_ERROR = ""
 if platform.system() == "Windows":
     try:
         import vgamepad as vg
+        # Tes instansiasi untuk memastikan driver ViGEmBus terpasang di Windows
+        _test_gp = vg.VX360Gamepad()
+        del _test_gp
         HAS_VGAMEPAD = True
     except Exception as e:
-        print(f"[Info] vgamepad belum terpasang ({e}). Mode fallback keyboard aktif.")
+        HAS_VGAMEPAD = False
+        VGAMEPAD_ERROR = str(e)
 
 try:
     from pynput.keyboard import Controller as KbController, Key
@@ -39,6 +45,7 @@ except Exception:
 
 # Mapping tombol Xbox 360 (vgamepad)
 if HAS_VGAMEPAD:
+    import vgamepad as vg
     VG_BUTTONS = {
         'cross': vg.XUSB_BUTTON.XUSB_GAMEPAD_A,          # Cross = A
         'circle': vg.XUSB_BUTTON.XUSB_GAMEPAD_B,         # Circle = B
@@ -102,15 +109,33 @@ class PlayerSlotManager:
 
 slot_manager = PlayerSlotManager()
 
-def get_local_ip():
+def get_all_local_ips():
+    """Mendapatkan semua alamat IP lokal (WiFi, Hotspot, LAN)"""
+    ips = []
+    try:
+        # Coba cara standar
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, None):
+            ip = info[4][0]
+            if ':' not in ip and not ip.startswith('127.'):
+                if ip not in ips:
+                    ips.append(ip)
+    except Exception:
+        pass
+
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
+        primary_ip = s.getsockname()[0]
         s.close()
-        return ip
+        if primary_ip not in ips and not primary_ip.startswith('127.'):
+            ips.insert(0, primary_ip)
     except Exception:
-        return "127.0.0.1"
+        pass
+
+    if not ips:
+        ips.append("127.0.0.1")
+    return ips
 
 def handle_gamepad_state(slot, data):
     """Update virtual gamepad state untuk player spesifik"""
@@ -119,7 +144,7 @@ def handle_gamepad_state(slot, data):
 
     gp = slot_manager.get_gamepad(slot)
     if HAS_VGAMEPAD and gp:
-        # Tombol
+        # Update Tombol
         for btn, is_down in buttons.items():
             vg_btn = VG_BUTTONS.get(btn)
             if vg_btn:
@@ -135,10 +160,10 @@ def handle_gamepad_state(slot, data):
         gp.right_trigger(value=max(0, min(255, r2_val)))
 
         # Joysticks Left & Right (-32768 s/d 32767)
-        lx = int(axes.get('lx', 0.0) * 32767)
-        ly = int(axes.get('ly', 0.0) * -32767)
-        rx = int(axes.get('rx', 0.0) * 32767)
-        ry = int(axes.get('ry', 0.0) * -32767)
+        lx = int(float(axes.get('lx', 0.0)) * 32767)
+        ly = int(float(axes.get('ly', 0.0)) * -32767)  # Invert Y sesuai standar XInput
+        rx = int(float(axes.get('rx', 0.0)) * 32767)
+        ry = int(float(axes.get('ry', 0.0)) * -32767)
 
         gp.left_joystick(x_value=max(-32768, min(32767, lx)), y_value=max(-32768, min(32767, ly)))
         gp.right_joystick(x_value=max(-32768, min(32767, rx)), y_value=max(-32768, min(32767, ry)))
@@ -200,7 +225,7 @@ async def main():
         print(f"{Fore.RED}Modul websockets belum terpasang! Jalankan: pip install websockets{Style.RESET_ALL}")
         sys.exit(1)
 
-    ip = get_local_ip()
+    all_ips = get_all_local_ips()
     port = 8765
 
     banner = f"""
@@ -209,11 +234,24 @@ async def main():
 =================================================================={Style.RESET_ALL}
 Sistem Operasi   : {platform.system()} ({platform.release()})
 Kapasitas Pemain : {Fore.GREEN + Style.BRIGHT}Hingga 4 Orang Sekaligus (Multiplayer Co-op / Versus){Style.RESET_ALL}
-Emulasi Virtual  : {Fore.GREEN + "Virtual Xbox 360 Gamepad (XInput Slot 1-4) AKTIF" if HAS_VGAMEPAD else Fore.YELLOW + "Fallback Keyboard (Install vgamepad untuk 4 stik terpisah)"}{Style.RESET_ALL}
+Emulasi Virtual  : {Fore.GREEN + "Virtual Xbox 360 Gamepad (XInput Slot 1-4) AKTIF" if HAS_VGAMEPAD else Fore.YELLOW + "Fallback Keyboard (Install ViGEmBus untuk XInput stik PES)"}{Style.RESET_ALL}
+"""
+    if not HAS_VGAMEPAD and platform.system() == "Windows":
+        banner += f"""
+{Fore.YELLOW}⚠️  CATATAN PENTING UNTUK PES / STIK VIRTUAL:{Style.RESET_ALL}
+Driver ViGEmBus belum terdeteksi di Windows ini ({VGAMEPAD_ERROR}).
+Untuk bermain PES dengan stik virtual Xbox 360:
+1. Unduh installer ViGEmBus: {Fore.CYAN}https://github.com/nefarius/ViGEmBus/releases/latest{Style.RESET_ALL}
+2. Buka dan instal file 'ViGEmBusSetup_x64.msi', lalu jalankan server ini kembali.
+"""
 
-{Fore.GREEN}Hubungkan ke-4 HP Anda ke:{Style.RESET_ALL}
-  👉  IP Laptop : {Fore.WHITE + Style.BRIGHT}ws://{ip}:{port}{Style.RESET_ALL}
-  👉  Port      : {port}
+    banner += f"""
+{Fore.GREEN}Alamat IP Laptop yang bisa dimasukkan di HP:{Style.RESET_ALL}"""
+    for i, ip_addr in enumerate(all_ips):
+        banner += f"""
+  👉 Pilihan {i+1} : {Fore.WHITE + Style.BRIGHT}{ip_addr}{Style.RESET_ALL}  (atau ketik: {ip_addr}:{port})"""
+
+    banner += f"""
 
 Lampu Indikator di HP:
   🔵 Player 1 : Biru
@@ -221,9 +259,9 @@ Lampu Indikator di HP:
   🟢 Player 3 : Hijau
   🟣 Player 4 : Ungu / Pink
 
-Semua HP & Laptop cukup berada di 1 WiFi atau Hotspot yang sama!
+Pastikan HP dan Laptop berada dalam 1 WiFi atau Hotspot yang sama!
 ==================================================================
-Menunggu koneksi dari pemain... (Tekan Ctrl+C untuk berhenti)
+Menunggu koneksi dari aplikasi HP di port {port}... (Tekan Ctrl+C untuk berhenti)
 """
     print(banner)
 

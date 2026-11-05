@@ -12,11 +12,12 @@ interface DPadProps {
     dpad_left: boolean;
     dpad_right: boolean;
   };
+  scale?: number;
 }
 
-export const DPad: React.FC<DPadProps> = ({ onPressIn, onPressOut, activeButtons }) => {
+export const DPad: React.FC<DPadProps> = ({ onPressIn, onPressOut, activeButtons, scale = 1.0 }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { transform: [{ scale }] }]}>
       {/* Background Cross Plate */}
       <View style={styles.crossPlateVertical} />
       <View style={styles.crossPlateHorizontal} />

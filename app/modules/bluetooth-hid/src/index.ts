@@ -26,6 +26,8 @@ type BluetoothHidEvents = {
 };
 
 declare class BluetoothHidModuleClass extends NativeModule<BluetoothHidEvents> {
+  hasBluetoothPermissions(): boolean;
+  requestBluetoothPermissions(): boolean;
   isSupported(): boolean;
   isEnabled(): boolean;
   isRegistered(): boolean;
@@ -55,6 +57,14 @@ try {
 }
 
 export const BluetoothHid = {
+  hasBluetoothPermissions(): boolean {
+    return nativeModule?.hasBluetoothPermissions() ?? true;
+  },
+
+  requestBluetoothPermissions(): boolean {
+    return nativeModule?.requestBluetoothPermissions() ?? true;
+  },
+
   isSupported(): boolean {
     return nativeModule?.isSupported() ?? false;
   },

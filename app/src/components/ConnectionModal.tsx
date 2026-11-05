@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -18,6 +18,7 @@ interface ConnectionModalProps {
   currentMode: ConnectionMode;
   onSelectMode: (mode: ConnectionMode) => void;
   status: ConnectionStatus;
+  connectionError?: string | null;
   targetDevice: string;
   serverIp: string;
   onConnectServer: (ip: string) => void;
@@ -30,33 +31,43 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
   currentMode,
   onSelectMode,
   status,
+  connectionError,
   targetDevice,
   serverIp,
   onConnectServer,
   onDisconnectServer,
 }) => {
-  const [ipInput, setIpInput] = useState(serverIp || '192.168.1.100:8765');
+  const [ipInput, setIpInput] = useState(serverIp || '192.168.1.100');
   const [btStatusMsg, setBtStatusMsg] = useState('');
   const isConnected = status === 'connected';
+  const isConnecting = status === 'connecting';
+
+  useEffect(() => {
+    if (serverIp) {
+      setIpInput(serverIp);
+    }
+  }, [serverIp]);
 
   const handleRegisterBt = async () => {
     try {
-      setBtStatusMsg('Mendaftarkan HID Gamepad ke sistem...');
+      BluetoothHid.requestBluetoothPermissions();
+      setBtStatusMsg('Mendaftarkan HID Gamepad ke sistem Android...');
       const success = await BluetoothHid.registerGamepadApp();
       if (success) {
         setBtStatusMsg('✅ HID Gamepad terdaftar! Membuka Bluetooth discoverable...');
         BluetoothHid.requestDiscoverable();
       } else {
-        setBtStatusMsg('⚠️ Gagal mendaftarkan profil HID Bluetooth pada perangkat ini.');
+        setBtStatusMsg('⚠️ Bluetooth HID belum siap. Pastikan Bluetooth aktif dan izin diberikan.');
       }
     } catch (e: any) {
-      setBtStatusMsg(`Error: ${e?.message || 'Gagal'}`);
+      setBtStatusMsg(`Error: ${e?.message || 'Gagal mendaftar'}`);
     }
   };
 
   const handleMakeDiscoverable = () => {
+    BluetoothHid.requestBluetoothPermissions();
     BluetoothHid.requestDiscoverable();
-    setBtStatusMsg('📡 Bluetooth HP sekarang dapat ditemukan oleh Laptop (300 detik).');
+    setBtStatusMsg('📡 Bluetooth HP dapat ditemukan oleh Laptop (300 detik). Cari di Settings Bluetooth Laptop.');
   };
 
   return (
@@ -78,6 +89,26 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
           <View style={styles.tabContainer}>
             <TouchableOpacity
               activeOpacity={0.8}
+              onPress={() => onSelectMode('pc_server')}
+              style={[styles.tab, currentMode === 'pc_server' && styles.tabActive]}
+            >
+              <MaterialCommunityIcons
+                name="wifi"
+                size={18}
+                color={currentMode === 'pc_server' ? '#00e5ff' : '#7d87a1'}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  currentMode === 'pc_server' && styles.tabTextActive,
+                ]}
+              >
+                PC Server (WiFi / Hotspot) [PES]
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
               onPress={() => onSelectMode('bluetooth')}
               style={[styles.tab, currentMode === 'bluetooth' && styles.tabActive]}
             >
@@ -95,29 +126,68 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                 Bluetooth HID (Direct)
               </Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onSelectMode('pc_server')}
-              style={[styles.tab, currentMode === 'pc_server' && styles.tabActive]}
-            >
-              <MaterialCommunityIcons
-                name="wifi"
-                size={18}
-                color={currentMode === 'pc_server' ? '#00e5ff' : '#7d87a1'}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  currentMode === 'pc_server' && styles.tabTextActive,
-                ]}
-              >
-                PC Server (WiFi / Hotspot)
-              </Text>
-            </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+            {/* PC SERVER MODE */}
+            {currentMode === 'pc_server' && (
+              <View style={styles.section}>
+                <View style={styles.statusBox}>
+                  <Text style={styles.statusLabel}>Status Koneksi:</Text>
+                  <Text style={[styles.statusValue, isConnected ? styles.textSuccess : isConnecting ? styles.textWarning : styles.textMuted]}>
+                    {isConnected ? `🟢 Terhubung ke ${targetDevice}` : isConnecting ? '🟡 Sedang Menghubungkan...' : '⚪ Belum Terhubung'}
+                  </Text>
+                </View>
+
+                {/* ERROR BOX JIKA GAGAL CONNECT */}
+                {connectionError ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle" size={18} color="#ff3d00" />
+                    <Text style={styles.errorText}>{connectionError}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Alamat IP Laptop (Bisa tanpa port :8765):</Text>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={styles.textInput}
+                      value={ipInput}
+                      onChangeText={setIpInput}
+                      placeholder="Contoh: 192.168.1.15"
+                      placeholderTextColor="#5a637a"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                    {isConnected ? (
+                      <TouchableOpacity
+                        style={[styles.connectBtn, styles.btnDisconnect]}
+                        onPress={onDisconnectServer}
+                      >
+                        <Text style={styles.connectBtnText}>Putus</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.connectBtn, styles.btnConnect]}
+                        onPress={() => onConnectServer(ipInput)}
+                      >
+                        <Text style={styles.connectBtnText}>{isConnecting ? 'Tunggu...' : 'Hubungkan'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <Text style={styles.inputHint}>💡 Port :8765 otomatis ditambahkan. Cukup ketik angka IP dari terminal server.</Text>
+                </View>
+
+                <View style={styles.guideBox}>
+                  <Text style={styles.guideTitle}>Cara Mengatasi Jika Gagal Connect:</Text>
+                  <Text style={styles.guideStep}>1. Buka folder <Text style={styles.bold}>pc-server</Text> di laptop $\rightarrow$ klik kanan <Text style={styles.bold}>start-windows.bat</Text> $\rightarrow$ Run as Administrator.</Text>
+                  <Text style={styles.guideStep}>2. Pastikan HP dan Laptop berada di <Text style={styles.bold}>WiFi yang sama</Text>, atau nyalakan <Text style={styles.bold}>Hotspot HP</Text> dan sambungkan laptop ke hotspot HP.</Text>
+                  <Text style={styles.guideStep}>3. Periksa jendela terminal di laptop, lihat daftar IP yang tertera, lalu masukkan IP tersebut di atas.</Text>
+                </View>
+              </View>
+            )}
+
             {/* BLUETOOTH HID MODE */}
             {currentMode === 'bluetooth' && (
               <View style={styles.section}>
@@ -134,7 +204,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                     onPress={handleRegisterBt}
                   >
                     <Ionicons name="bluetooth" size={16} color="#000" />
-                    <Text style={styles.btnPrimaryText}>Aktifkan Mode Gamepad</Text>
+                    <Text style={styles.btnPrimaryText}>1. Aktifkan Mode Stik</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -142,68 +212,17 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                     onPress={handleMakeDiscoverable}
                   >
                     <Ionicons name="radio-outline" size={16} color="#00e5ff" />
-                    <Text style={styles.btnSecondaryText}>Buat HP Terlihat (Pairing)</Text>
+                    <Text style={styles.btnSecondaryText}>2. Buat HP Terlihat</Text>
                   </TouchableOpacity>
                 </View>
 
                 {btStatusMsg ? <Text style={styles.infoAlert}>{btStatusMsg}</Text> : null}
 
                 <View style={styles.guideBox}>
-                  <Text style={styles.guideTitle}>Cara Hubungkan via Bluetooth ke Laptop:</Text>
-                  <Text style={styles.guideStep}>1. Tekan tombol <Text style={styles.bold}>"Aktifkan Mode Gamepad"</Text> di atas.</Text>
-                  <Text style={styles.guideStep}>2. Buka <Text style={styles.bold}>Settings {'>'} Bluetooth</Text> di Laptop Windows/Mac.</Text>
-                  <Text style={styles.guideStep}>3. Pilih <Text style={styles.bold}>"Add Device"</Text> {'>'} pilih perangkat bernama <Text style={styles.bold}>"Wireless Controller"</Text>.</Text>
-                  <Text style={styles.guideStep}>4. Setelah berpasangan, game di laptop akan langsung mendeteksi joystick!</Text>
-                </View>
-              </View>
-            )}
-
-            {/* PC SERVER MODE */}
-            {currentMode === 'pc_server' && (
-              <View style={styles.section}>
-                <View style={styles.statusBox}>
-                  <Text style={styles.statusLabel}>Status PC Server:</Text>
-                  <Text style={[styles.statusValue, isConnected ? styles.textSuccess : styles.textMuted]}>
-                    {isConnected ? `🟢 Terhubung ke ${targetDevice}` : '⚪ Belum Terhubung'}
-                  </Text>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Alamat IP & Port Laptop:</Text>
-                  <View style={styles.inputRow}>
-                    <TextInput
-                      style={styles.textInput}
-                      value={ipInput}
-                      onChangeText={setIpInput}
-                      placeholder="Contoh: 192.168.1.15:8765"
-                      placeholderTextColor="#5a637a"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    {isConnected ? (
-                      <TouchableOpacity
-                        style={[styles.connectBtn, styles.btnDisconnect]}
-                        onPress={onDisconnectServer}
-                      >
-                        <Text style={styles.connectBtnText}>Putus</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.connectBtn, styles.btnConnect]}
-                        onPress={() => onConnectServer(ipInput)}
-                      >
-                        <Text style={styles.connectBtnText}>Hubungkan</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-
-                <View style={styles.guideBox}>
-                  <Text style={styles.guideTitle}>Cara Menjalankan Server di Laptop:</Text>
-                  <Text style={styles.guideStep}>1. Buka folder <Text style={styles.bold}>pc-server</Text> di laptop Anda.</Text>
-                  <Text style={styles.guideStep}>2. Klik ganda <Text style={styles.bold}>start-windows.bat</Text> (atau jalankan <Text style={styles.bold}>python server.py</Text>).</Text>
-                  <Text style={styles.guideStep}>3. Server akan menampilkan alamat IP laptop di terminal.</Text>
-                  <Text style={styles.guideStep}>4. Masukkan IP tersebut pada kolom di atas lalu tekan <Text style={styles.bold}>Hubungkan</Text>.</Text>
+                  <Text style={styles.guideTitle}>Cara Pairing Bluetooth ke Laptop:</Text>
+                  <Text style={styles.guideStep}>1. Tekan tombol <Text style={styles.bold}>1. Aktifkan Mode Stik</Text> lalu <Text style={styles.bold}>2. Buat HP Terlihat</Text>.</Text>
+                  <Text style={styles.guideStep}>2. Di Laptop: Buka <Text style={styles.bold}>Settings {'>'} Bluetooth {'>'} Add device</Text>.</Text>
+                  <Text style={styles.guideStep}>3. Pilih perangkat bernama <Text style={styles.bold}>"Wireless Controller"</Text>.</Text>
                 </View>
               </View>
             )}
@@ -217,15 +236,15 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 7, 12, 0.85)',
+    backgroundColor: 'rgba(5, 7, 12, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
   },
   modalCard: {
-    width: '90%',
+    width: '92%',
     maxWidth: 580,
-    maxHeight: '90%',
+    maxHeight: '92%',
     backgroundColor: '#12151e',
     borderRadius: 16,
     borderWidth: 1.5,
@@ -258,7 +277,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0c0e15',
     borderRadius: 10,
     padding: 4,
-    marginBottom: 16,
+    marginBottom: 14,
     gap: 4,
   },
   tab: {
@@ -276,7 +295,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#7d87a1',
   },
@@ -287,7 +306,7 @@ const styles = StyleSheet.create({
     maxHeight: 280,
   },
   section: {
-    gap: 12,
+    gap: 10,
   },
   statusBox: {
     flexDirection: 'row',
@@ -311,8 +330,28 @@ const styles = StyleSheet.create({
   textSuccess: {
     color: '#00e676',
   },
+  textWarning: {
+    color: '#ffb300',
+  },
   textMuted: {
     color: '#717b94',
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#301111',
+    borderWidth: 1,
+    borderColor: '#ff3d00',
+    borderRadius: 10,
+    padding: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#ffb4ab',
+    lineHeight: 16,
+    fontWeight: '600',
   },
   btnRow: {
     flexDirection: 'row',
@@ -366,7 +405,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: '#b0bad3',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   guideStep: {
     fontSize: 11,
@@ -399,6 +438,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 13,
     color: '#ffffff',
+  },
+  inputHint: {
+    fontSize: 10,
+    color: '#00e5ff',
+    opacity: 0.8,
   },
   connectBtn: {
     paddingHorizontal: 16,

@@ -49,10 +49,11 @@ export function useControllerState() {
   const [buttons, setButtons] = useState<ButtonsState>(INITIAL_BUTTONS);
   const [axes, setAxes] = useState<GamepadAxes>(INITIAL_AXES);
 
-  const [mode, setMode] = useState<ConnectionMode>('bluetooth');
+  const [mode, setMode] = useState<ConnectionMode>('pc_server'); // Default to PC Server since user plays PES on laptop
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [targetDevice, setTargetDevice] = useState<string>('');
-  const [serverIp, setServerIp] = useState<string>('192.168.1.100:8765');
+  const [serverIp, setServerIp] = useState<string>('192.168.1.100');
   const [pingMs, setPingMs] = useState<number | null>(null);
   const [playerNumber, setPlayerNumber] = useState<number>(1);
   const [playerColor, setPlayerColor] = useState<string>('#00e5ff');
@@ -60,7 +61,7 @@ export function useControllerState() {
   const wsRef = useRef<WebSocket | null>(null);
   const buttonsRef = useRef<ButtonsState>(INITIAL_BUTTONS);
   const axesRef = useRef<GamepadAxes>(INITIAL_AXES);
-  const dirtyRef = useRef<boolean>(false);
+  const rafIdRef = useRef<number | null>(null);
 
   // Send updates to either Bluetooth HID or WebSocket
   const flushState = useCallback(() => {
@@ -92,7 +93,6 @@ export function useControllerState() {
         curButtons.dpad_left
       );
 
-      // Map -1.0..1.0 to 0..255 (center 128)
       const lx = Math.max(0, Math.min(255, Math.round((curAxes.lx + 1) * 127.5)));
       const ly = Math.max(0, Math.min(255, Math.round((curAxes.ly + 1) * 127.5)));
       const rx = Math.max(0, Math.min(255, Math.round((curAxes.rx + 1) * 127.5)));
@@ -105,17 +105,19 @@ export function useControllerState() {
 
     // 2. PC Server Mode (WebSocket)
     if (mode === 'pc_server' && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'input',
-          buttons: curButtons,
-          axes: curAxes,
-        })
-      );
+      try {
+        wsRef.current.send(
+          JSON.stringify({
+            type: 'input',
+            buttons: curButtons,
+            axes: curAxes,
+          })
+        );
+      } catch (err) {}
     }
   }, [mode]);
 
-  // Press / Release button handlers
+  // Press / Release button handlers - kirim segera agar tidak ada lag
   const pressButton = useCallback(
     (name: ButtonName) => {
       triggerHaptic('light');
@@ -135,57 +137,89 @@ export function useControllerState() {
     [flushState]
   );
 
+  // Update axes dengan requestAnimationFrame throttle agar tidak membebani jaringan / lag
   const updateAxes = useCallback(
     (newAxes: Partial<GamepadAxes>) => {
       axesRef.current = { ...axesRef.current, ...newAxes };
       setAxes((prev) => ({ ...prev, ...newAxes }));
-      flushState();
+
+      if (!rafIdRef.current) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = null;
+          flushState();
+        });
+      }
     },
     [flushState]
   );
 
-  // Bluetooth HID listeners
+  // Inisialisasi Bluetooth
   useEffect(() => {
+    BluetoothHid.requestBluetoothPermissions();
     BluetoothHid.initProfileProxy();
 
     const connSub = BluetoothHid.addConnectionListener((evt) => {
       if (evt.isConnected) {
         setStatus('connected');
-        setTargetDevice(evt.deviceName || 'Laptop / PC');
+        setTargetDevice(evt.deviceName || 'Laptop / PC (Bluetooth)');
+        setConnectionError(null);
         triggerHaptic('medium');
       } else {
-        setStatus('disconnected');
-        setTargetDevice('');
+        if (mode === 'bluetooth') {
+          setStatus('disconnected');
+          setTargetDevice('');
+        }
       }
     });
 
     return () => {
       connSub?.remove();
     };
-  }, []);
+  }, [mode]);
 
-  // WebSocket Server connection
+  // WebSocket Server connection - dengan auto-port 8765 & diagnosa error
   const connectToServer = useCallback((ip: string) => {
     if (wsRef.current) {
-      wsRef.current.close();
+      try {
+        wsRef.current.close();
+      } catch (e) {}
       wsRef.current = null;
     }
 
+    setConnectionError(null);
     setStatus('connecting');
-    setServerIp(ip);
 
-    let cleanUrl = ip.trim();
-    if (!cleanUrl.startsWith('ws://') && !cleanUrl.startsWith('wss://')) {
-      cleanUrl = `ws://${cleanUrl}`;
+    // Membersihkan format input IP
+    let rawAddress = ip.trim().replace(/^wss?:\/\//i, '').replace(/\/+$/, '');
+    if (!rawAddress.includes(':')) {
+      rawAddress = `${rawAddress}:8765`;
     }
+    const cleanUrl = `ws://${rawAddress}`;
+    setServerIp(rawAddress);
+
+    let connectionTimeout: any = null;
 
     try {
       const socket = new WebSocket(cleanUrl);
       wsRef.current = socket;
 
+      connectionTimeout = setTimeout(() => {
+        if (socket.readyState !== WebSocket.OPEN) {
+          try {
+            socket.close();
+          } catch (e) {}
+          setStatus('disconnected');
+          setConnectionError(
+            `Waktu koneksi habis ke ${cleanUrl}.\nPastikan server.py di laptop sudah berjalan dan HP berada di WiFi/Hotspot yang sama.`
+          );
+        }
+      }, 5000);
+
       socket.onopen = () => {
+        if (connectionTimeout) clearTimeout(connectionTimeout);
         setStatus('connected');
-        setTargetDevice(`PC (${cleanUrl.replace('ws://', '')})`);
+        setConnectionError(null);
+        setTargetDevice(`PC (${rawAddress})`);
         triggerHaptic('medium');
       };
 
@@ -204,28 +238,40 @@ export function useControllerState() {
             }
           } else if (data.type === 'pong' && data.time) {
             setPingMs(Date.now() - data.time);
+          } else if (data.type === 'error') {
+            setConnectionError(data.message || 'Error dari server');
           }
         } catch (e) {}
       };
 
       socket.onerror = () => {
+        if (connectionTimeout) clearTimeout(connectionTimeout);
         setStatus('disconnected');
+        setConnectionError(
+          `Gagal terhubung ke ${cleanUrl}.\nPeriksa kembali IP laptop atau izinkan akses port 8765 di Windows Firewall.`
+        );
       };
 
       socket.onclose = () => {
+        if (connectionTimeout) clearTimeout(connectionTimeout);
         setStatus('disconnected');
       };
-    } catch (e) {
+    } catch (e: any) {
+      if (connectionTimeout) clearTimeout(connectionTimeout);
       setStatus('disconnected');
+      setConnectionError(`Error: ${e?.message || 'Gagal membuat soket'}`);
     }
   }, []);
 
   const disconnectFromServer = useCallback(() => {
     if (wsRef.current) {
-      wsRef.current.close();
+      try {
+        wsRef.current.close();
+      } catch (e) {}
       wsRef.current = null;
     }
     setStatus('disconnected');
+    setConnectionError(null);
   }, []);
 
   return {
@@ -233,6 +279,7 @@ export function useControllerState() {
     axes,
     mode,
     status,
+    connectionError,
     targetDevice,
     serverIp,
     pingMs,

@@ -11,15 +11,17 @@ interface ActionButtonsProps {
     cross: boolean;
     square: boolean;
   };
+  scale?: number;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onPressIn,
   onPressOut,
   activeButtons,
+  scale = 1.0,
 }) => {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { transform: [{ scale }] }]}>
       {/* Background Circular Plate (Diperbesar) */}
       <View style={styles.plate} />
 

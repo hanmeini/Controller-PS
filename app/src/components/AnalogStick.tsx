@@ -9,11 +9,11 @@ interface AnalogStickProps {
   onReleaseClick: (name: ButtonName) => void;
   isClicked: boolean;
   deadzone?: number;
+  scale?: number;
 }
 
-const BASE_RADIUS = 62;
-const STICK_RADIUS = 32;
-const MAX_DISTANCE = BASE_RADIUS - 14;
+const DEFAULT_BASE_RADIUS = 64;
+const DEFAULT_STICK_RADIUS = 34;
 
 export const AnalogStick: React.FC<AnalogStickProps> = ({
   label,
@@ -21,44 +21,89 @@ export const AnalogStick: React.FC<AnalogStickProps> = ({
   onClick,
   onReleaseClick,
   isClicked,
-  deadzone = 0.08,
+  deadzone = 0.05,
+  scale = 1.0,
 }) => {
   const [stickPos, setStickPos] = useState({ x: 0, y: 0 });
   const buttonKey: ButtonName = label === 'L3' ? 'l3' : 'r3';
+
+  const baseRadius = DEFAULT_BASE_RADIUS * scale;
+  const stickRadius = DEFAULT_STICK_RADIUS * scale;
+  const maxDistance = baseRadius - (12 * scale);
+
+  const startOffsetRef = useRef({ x: 0, y: 0 });
+  const lastTapTimeRef = useRef(0);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => {},
-      onPanResponderMove: (_, gestureState) => {
-        let dx = gestureState.dx;
-        let dy = gestureState.dy;
+
+      onPanResponderGrant: (evt) => {
+        // Deteksi double-tap cepat untuk L3 / R3 click
+        const now = Date.now();
+        if (now - lastTapTimeRef.current < 300) {
+          onClick(buttonKey);
+          setTimeout(() => onReleaseClick(buttonKey), 250);
+        }
+        lastTapTimeRef.current = now;
+
+        // Ambil lokasi sentuhan relatif terhadap titik pusat baseSocket
+        const localX = evt.nativeEvent.locationX;
+        const localY = evt.nativeEvent.locationY;
+        const center = baseRadius;
+
+        let dx = localX - center;
+        let dy = localY - center;
 
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance > MAX_DISTANCE) {
+        if (distance > maxDistance) {
           const angle = Math.atan2(dy, dx);
-          dx = Math.cos(angle) * MAX_DISTANCE;
-          dy = Math.sin(angle) * MAX_DISTANCE;
+          dx = Math.cos(angle) * maxDistance;
+          dy = Math.sin(angle) * maxDistance;
         }
 
+        startOffsetRef.current = { x: dx, y: dy };
         setStickPos({ x: dx, y: dy });
 
-        // Normalize to -1.0 to 1.0
-        let normX = dx / MAX_DISTANCE;
-        let normY = dy / MAX_DISTANCE;
-
-        // Apply deadzone
+        let normX = dx / maxDistance;
+        let normY = dy / maxDistance;
         if (Math.abs(normX) < deadzone) normX = 0;
         if (Math.abs(normY) < deadzone) normY = 0;
 
         onMove(normX, normY);
       },
+
+      onPanResponderMove: (_, gestureState) => {
+        let dx = startOffsetRef.current.x + gestureState.dx;
+        let dy = startOffsetRef.current.y + gestureState.dy;
+
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > maxDistance) {
+          const angle = Math.atan2(dy, dx);
+          dx = Math.cos(angle) * maxDistance;
+          dy = Math.sin(angle) * maxDistance;
+        }
+
+        setStickPos({ x: dx, y: dy });
+
+        let normX = dx / maxDistance;
+        let normY = dy / maxDistance;
+
+        if (Math.abs(normX) < deadzone) normX = 0;
+        if (Math.abs(normY) < deadzone) normY = 0;
+
+        onMove(normX, normY);
+      },
+
       onPanResponderRelease: () => {
         setStickPos({ x: 0, y: 0 });
         onMove(0, 0);
       },
+
       onPanResponderTerminate: () => {
         setStickPos({ x: 0, y: 0 });
         onMove(0, 0);
@@ -68,36 +113,55 @@ export const AnalogStick: React.FC<AnalogStickProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Outer Socket */}
-      <View style={styles.baseSocket}>
-        <View style={styles.innerRing} />
-
-        {/* Movable Thumbstick */}
+      {/* Outer Socket - panHandlers dipasang di seluruh area soket agar selalu responsif */}
+      <View
+        {...panResponder.panHandlers}
+        hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        style={[
+          styles.baseSocket,
+          {
+            width: baseRadius * 2,
+            height: baseRadius * 2,
+            borderRadius: baseRadius,
+          },
+        ]}
+      >
         <View
-          {...panResponder.panHandlers}
+          pointerEvents="none"
+          style={[
+            styles.innerRing,
+            {
+              width: (baseRadius - 10) * 2,
+              height: (baseRadius - 10) * 2,
+              borderRadius: baseRadius - 10,
+            },
+          ]}
+        />
+
+        {/* Movable Thumbstick - pointerEvents="none" agar sentuhan diproses mulus oleh baseSocket */}
+        <View
+          pointerEvents="none"
           style={[
             styles.thumbstick,
             {
+              width: stickRadius * 2,
+              height: stickRadius * 2,
+              borderRadius: stickRadius,
               transform: [{ translateX: stickPos.x }, { translateY: stickPos.y }],
             },
             isClicked && styles.thumbstickClicked,
           ]}
         >
-          {/* Grip Texture & L3/R3 Click */}
+          {/* Grip Texture & Label */}
           <View
-            onTouchStart={(e) => {
-              e.stopPropagation();
-              onClick(buttonKey);
-            }}
-            onTouchEnd={(e) => {
-              e.stopPropagation();
-              onReleaseClick(buttonKey);
-            }}
-            onTouchCancel={(e) => {
-              e.stopPropagation();
-              onReleaseClick(buttonKey);
-            }}
-            style={styles.stickCenterCap}
+            style={[
+              styles.stickCenterCap,
+              {
+                width: (stickRadius - 5) * 2,
+                height: (stickRadius - 5) * 2,
+                borderRadius: stickRadius - 5,
+              },
+            ]}
           >
             <Text style={[styles.stickLabel, isClicked && styles.stickLabelActive]}>{label}</Text>
           </View>
@@ -113,38 +177,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   baseSocket: {
-    width: BASE_RADIUS * 2,
-    height: BASE_RADIUS * 2,
-    borderRadius: BASE_RADIUS,
     backgroundColor: '#12141c',
     borderWidth: 2,
     borderColor: '#242938',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    elevation: 3,
+    elevation: 4,
   },
   innerRing: {
-    width: (BASE_RADIUS - 10) * 2,
-    height: (BASE_RADIUS - 10) * 2,
-    borderRadius: BASE_RADIUS - 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#1e2230',
   },
   thumbstick: {
     position: 'absolute',
-    width: STICK_RADIUS * 2,
-    height: STICK_RADIUS * 2,
-    borderRadius: STICK_RADIUS,
     backgroundColor: '#272c3d',
     borderWidth: 2,
     borderColor: '#3a425c',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
+    elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.6,
     shadowRadius: 5,
   },
   thumbstickClicked: {
@@ -153,9 +208,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.9 }],
   },
   stickCenterCap: {
-    width: (STICK_RADIUS - 5) * 2,
-    height: (STICK_RADIUS - 5) * 2,
-    borderRadius: STICK_RADIUS - 5,
     backgroundColor: '#1d2130',
     borderWidth: 1,
     borderColor: '#32394f',
@@ -165,7 +217,7 @@ const styles = StyleSheet.create({
   stickLabel: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#7b839b',
+    color: '#8b94ab',
   },
   stickLabelActive: {
     color: '#00e5ff',

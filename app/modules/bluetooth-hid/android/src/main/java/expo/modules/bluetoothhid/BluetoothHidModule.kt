@@ -1,5 +1,6 @@
 package expo.modules.bluetoothhid
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -10,6 +11,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -134,6 +136,34 @@ class BluetoothHidModule : Module() {
       "onConnectionStateChanged",
       "onProfileProxyConnected"
     )
+
+    Function("hasBluetoothPermissions") {
+      val context = appContext.reactContext ?: return@Function false
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val connect = ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        val scan = ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+        val adv = ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED
+        return@Function connect && scan && adv
+      }
+      return@Function true
+    }
+
+    Function("requestBluetoothPermissions") {
+      val activity = appContext.currentActivity ?: return@Function false
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        activity.requestPermissions(
+          arrayOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.ACCESS_FINE_LOCATION
+          ),
+          2001
+        )
+        return@Function true
+      }
+      return@Function true
+    }
 
     Function("isSupported") {
       val context = appContext.reactContext ?: return@Function false

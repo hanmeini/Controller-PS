@@ -8,6 +8,7 @@ interface CenterBarProps {
   onPressOut: (name: ButtonName) => void;
   onOpenConnection: () => void;
   onOpenSettings: () => void;
+  onOpenLayout: () => void;
   mode: ConnectionMode;
   status: ConnectionStatus;
   targetDevice: string;
@@ -24,6 +25,7 @@ export const CenterBar: React.FC<CenterBarProps> = ({
   onPressOut,
   onOpenConnection,
   onOpenSettings,
+  onOpenLayout,
   mode,
   status,
   targetDevice,
@@ -92,8 +94,16 @@ export const CenterBar: React.FC<CenterBarProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Center: PS BUTTON & SETTINGS */}
+      {/* Bottom Center: PS BUTTON, LAYOUT, CONNECTION & SETTINGS */}
       <View style={styles.bottomRow}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onOpenLayout}
+          style={styles.iconBtn}
+        >
+          <MaterialCommunityIcons name="gamepad-circle" size={17} color="#00e5ff" />
+        </TouchableOpacity>
+
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onOpenSettings}

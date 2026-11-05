@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
 import { useControllerState } from './src/hooks/useControllerState';
-import { ControllerSettings } from './src/types/controller';
+import { ControllerSettings, ControllerLayoutConfig } from './src/types/controller';
 import { DPad } from './src/components/DPad';
 import { ActionButtons } from './src/components/ActionButtons';
 import { AnalogStick } from './src/components/AnalogStick';
@@ -13,12 +13,26 @@ import { Touchpad } from './src/components/Touchpad';
 import { CenterBar } from './src/components/CenterBar';
 import { ConnectionModal } from './src/components/ConnectionModal';
 import { SettingsModal } from './src/components/SettingsModal';
+import { LayoutModal } from './src/components/LayoutModal';
+
+const DEFAULT_LAYOUT: ControllerLayoutConfig = {
+  preset: 'dualshock',
+  dpadOnTop: true,
+  actionOnTop: true,
+  leftWingOffsetX: 0,
+  leftWingOffsetY: 0,
+  rightWingOffsetX: 0,
+  rightWingOffsetY: 0,
+  buttonScale: 1.0,
+  stickScale: 1.0,
+};
 
 export default function App() {
   const {
     buttons,
     mode,
     status,
+    connectionError,
     targetDevice,
     serverIp,
     pingMs,
@@ -33,17 +47,21 @@ export default function App() {
 
   const [connectionModalVisible, setConnectionModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [layoutModalVisible, setLayoutModalVisible] = useState(false);
+
+  const [layout, setLayout] = useState<ControllerLayoutConfig>(DEFAULT_LAYOUT);
 
   const [settings, setSettings] = useState<ControllerSettings>({
     vibration: true,
     vibrationStrength: 'light',
-    stickDeadzone: 0.08,
+    stickDeadzone: 0.05,
     motionControl: false,
     theme: 'dark',
     touchpadMode: 'gamepad',
+    layout: DEFAULT_LAYOUT,
   });
 
-  // Lock to landscape mode
+  // Kunci orientasi ke landscape
   useEffect(() => {
     async function lockOrientation() {
       try {
@@ -56,6 +74,78 @@ export default function App() {
   const handleUpdateSettings = (newSettings: Partial<ControllerSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
+
+  const handleUpdateLayout = (newLayout: Partial<ControllerLayoutConfig>) => {
+    setLayout((prev) => ({ ...prev, ...newLayout }));
+  };
+
+  const handleResetLayout = () => {
+    setLayout(DEFAULT_LAYOUT);
+  };
+
+  // Komponen D-Pad
+  const renderDPad = () => (
+    <View style={styles.dpadBox}>
+      <DPad
+        onPressIn={pressButton}
+        onPressOut={releaseButton}
+        scale={layout.buttonScale}
+        activeButtons={{
+          dpad_up: buttons.dpad_up,
+          dpad_down: buttons.dpad_down,
+          dpad_left: buttons.dpad_left,
+          dpad_right: buttons.dpad_right,
+        }}
+      />
+    </View>
+  );
+
+  // Komponen Analog L3
+  const renderLeftStick = () => (
+    <View style={styles.stickBoxLeft}>
+      <AnalogStick
+        label="L3"
+        onMove={(x, y) => updateAxes({ lx: x, ly: y })}
+        onClick={pressButton}
+        onReleaseClick={releaseButton}
+        isClicked={buttons.l3}
+        deadzone={settings.stickDeadzone}
+        scale={layout.stickScale}
+      />
+    </View>
+  );
+
+  // Komponen Action Buttons (Segitiga, Bulat, Silang, Kotak)
+  const renderActionButtons = () => (
+    <View style={styles.actionButtonsBox}>
+      <ActionButtons
+        onPressIn={pressButton}
+        onPressOut={releaseButton}
+        scale={layout.buttonScale}
+        activeButtons={{
+          triangle: buttons.triangle,
+          circle: buttons.circle,
+          cross: buttons.cross,
+          square: buttons.square,
+        }}
+      />
+    </View>
+  );
+
+  // Komponen Analog R3
+  const renderRightStick = () => (
+    <View style={styles.stickBoxRight}>
+      <AnalogStick
+        label="R3"
+        onMove={(x, y) => updateAxes({ rx: x, ry: y })}
+        onClick={pressButton}
+        onReleaseClick={releaseButton}
+        isClicked={buttons.r3}
+        deadzone={settings.stickDeadzone}
+        scale={layout.stickScale}
+      />
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -91,42 +181,41 @@ export default function App() {
           />
         </View>
 
-        {/* MAIN GAMEPLAY AREA: VERTICAL DUALSHOCK STACK */}
+        {/* MAIN GAMEPLAY AREA: DYNAMIC CUSTOMIZABLE DUALSHOCK STACK */}
         <View style={styles.mainControlsRow}>
-          {/* LEFT WING: D-PAD DI ATAS, ANALOG L3 DI BAWAHNYA */}
-          <View style={styles.verticalLeftWing}>
-            <View style={styles.dpadBox}>
-              <DPad
-                onPressIn={pressButton}
-                onPressOut={releaseButton}
-                activeButtons={{
-                  dpad_up: buttons.dpad_up,
-                  dpad_down: buttons.dpad_down,
-                  dpad_left: buttons.dpad_left,
-                  dpad_right: buttons.dpad_right,
-                }}
-              />
-            </View>
-
-            <View style={styles.stickBoxLeft}>
-              <AnalogStick
-                label="L3"
-                onMove={(x, y) => updateAxes({ lx: x, ly: y })}
-                onClick={pressButton}
-                onReleaseClick={releaseButton}
-                isClicked={buttons.l3}
-                deadzone={settings.stickDeadzone}
-              />
-            </View>
+          {/* LEFT WING: POSISI DAPAT DITUKAR & DIGESER */}
+          <View
+            style={[
+              styles.verticalLeftWing,
+              {
+                transform: [
+                  { translateX: layout.leftWingOffsetX },
+                  { translateY: layout.leftWingOffsetY },
+                ],
+              },
+            ]}
+          >
+            {layout.dpadOnTop ? (
+              <>
+                {renderDPad()}
+                {renderLeftStick()}
+              </>
+            ) : (
+              <>
+                {renderLeftStick()}
+                {renderDPad()}
+              </>
+            )}
           </View>
 
-          {/* CENTER SECTION: SHARE, OPTIONS, STATUS & PS BUTTON */}
+          {/* CENTER SECTION: SHARE, OPTIONS, STATUS, LAYOUT & PS BUTTON */}
           <View style={styles.centerSection}>
             <CenterBar
               onPressIn={pressButton}
               onPressOut={releaseButton}
               onOpenConnection={() => setConnectionModalVisible(true)}
               onOpenSettings={() => setSettingsModalVisible(true)}
+              onOpenLayout={() => setLayoutModalVisible(true)}
               mode={mode}
               status={status}
               targetDevice={targetDevice}
@@ -139,31 +228,29 @@ export default function App() {
             />
           </View>
 
-          {/* RIGHT WING: TOMBOL AKSI DIPERBESAR DI ATAS, ANALOG R3 DI BAWAHNYA */}
-          <View style={styles.verticalRightWing}>
-            <View style={styles.actionButtonsBox}>
-              <ActionButtons
-                onPressIn={pressButton}
-                onPressOut={releaseButton}
-                activeButtons={{
-                  triangle: buttons.triangle,
-                  circle: buttons.circle,
-                  cross: buttons.cross,
-                  square: buttons.square,
-                }}
-              />
-            </View>
-
-            <View style={styles.stickBoxRight}>
-              <AnalogStick
-                label="R3"
-                onMove={(x, y) => updateAxes({ rx: x, ry: y })}
-                onClick={pressButton}
-                onReleaseClick={releaseButton}
-                isClicked={buttons.r3}
-                deadzone={settings.stickDeadzone}
-              />
-            </View>
+          {/* RIGHT WING: POSISI DAPAT DITUKAR & DIGESER */}
+          <View
+            style={[
+              styles.verticalRightWing,
+              {
+                transform: [
+                  { translateX: layout.rightWingOffsetX },
+                  { translateY: layout.rightWingOffsetY },
+                ],
+              },
+            ]}
+          >
+            {layout.actionOnTop ? (
+              <>
+                {renderActionButtons()}
+                {renderRightStick()}
+              </>
+            ) : (
+              <>
+                {renderRightStick()}
+                {renderActionButtons()}
+              </>
+            )}
           </View>
         </View>
       </View>
@@ -175,10 +262,20 @@ export default function App() {
         currentMode={mode}
         onSelectMode={setMode}
         status={status}
+        connectionError={connectionError}
         targetDevice={targetDevice}
         serverIp={serverIp}
         onConnectServer={connectToServer}
         onDisconnectServer={disconnectFromServer}
+      />
+
+      {/* LAYOUT CUSTOMIZER MODAL */}
+      <LayoutModal
+        visible={layoutModalVisible}
+        onClose={() => setLayoutModalVisible(false)}
+        layout={layout}
+        onUpdateLayout={handleUpdateLayout}
+        onResetLayout={handleResetLayout}
       />
 
       {/* SETTINGS MODAL */}
@@ -199,7 +296,7 @@ const styles = StyleSheet.create({
   },
   controllerBody: {
     flex: 1,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 6,
     justifyContent: 'space-between',
   },
@@ -221,7 +318,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: '100%',
-    paddingVertical: 4,
+    paddingVertical: 2,
+    zIndex: 2,
   },
   dpadBox: {
     alignItems: 'center',
@@ -230,14 +328,15 @@ const styles = StyleSheet.create({
   stickBoxLeft: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 4,
   },
   verticalRightWing: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'space-between',
     height: '100%',
-    paddingVertical: 4,
+    paddingVertical: 2,
+    zIndex: 2,
   },
   actionButtonsBox: {
     alignItems: 'center',
@@ -246,12 +345,12 @@ const styles = StyleSheet.create({
   stickBoxRight: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: 4,
   },
   centerSection: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
   },
 });
