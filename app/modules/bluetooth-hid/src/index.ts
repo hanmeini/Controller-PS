@@ -19,6 +19,23 @@ export interface ProfileProxyEvent {
   connected: boolean;
 }
 
+export interface PairedDevice {
+  name: string;
+  address: string;
+  isComputer?: boolean;
+}
+
+export interface BluetoothDiagnostics {
+  isSupported: boolean;
+  isEnabled: boolean;
+  hasPermissions: boolean;
+  isProxyConnected: boolean;
+  isRegistered: boolean;
+  isConnected: boolean;
+  connectedDeviceName: string;
+  myDeviceName: string;
+}
+
 type BluetoothHidEvents = {
   onRegistrationStatusChanged(event: RegistrationStatusEvent): void;
   onConnectionStateChanged(event: DeviceConnectionEvent): void;
@@ -32,11 +49,17 @@ declare class BluetoothHidModuleClass extends NativeModule<BluetoothHidEvents> {
   isEnabled(): boolean;
   isRegistered(): boolean;
   isConnected(): boolean;
+  getMyDeviceName(): string;
   getConnectedDeviceName(): string;
+  getBluetoothDiagnostics(): BluetoothDiagnostics;
   initProfileProxy(): boolean;
   registerGamepadApp(): Promise<boolean>;
   unregisterGamepadApp(): boolean;
   requestDiscoverable(): boolean;
+  openBluetoothSettings(): boolean;
+  getPairedDevices(): PairedDevice[];
+  connectDevice(address: string): Promise<boolean>;
+  disconnectDevice(): boolean;
   sendGamepadReport(
     buttons: number,
     dpad: number,
@@ -81,8 +104,27 @@ export const BluetoothHid = {
     return nativeModule?.isConnected() ?? false;
   },
 
+  getMyDeviceName(): string {
+    return nativeModule?.getMyDeviceName() ?? 'HP Android';
+  },
+
   getConnectedDeviceName(): string {
     return nativeModule?.getConnectedDeviceName() ?? '';
+  },
+
+  getBluetoothDiagnostics(): BluetoothDiagnostics {
+    return (
+      nativeModule?.getBluetoothDiagnostics() ?? {
+        isSupported: true,
+        isEnabled: false,
+        hasPermissions: false,
+        isProxyConnected: false,
+        isRegistered: false,
+        isConnected: false,
+        connectedDeviceName: '',
+        myDeviceName: 'HP Android',
+      }
+    );
   },
 
   initProfileProxy(): boolean {
@@ -100,6 +142,23 @@ export const BluetoothHid = {
 
   requestDiscoverable(): boolean {
     return nativeModule?.requestDiscoverable() ?? false;
+  },
+
+  openBluetoothSettings(): boolean {
+    return nativeModule?.openBluetoothSettings() ?? false;
+  },
+
+  getPairedDevices(): PairedDevice[] {
+    return nativeModule?.getPairedDevices() ?? [];
+  },
+
+  async connectDevice(address: string): Promise<boolean> {
+    if (!nativeModule) return false;
+    return await nativeModule.connectDevice(address);
+  },
+
+  disconnectDevice(): boolean {
+    return nativeModule?.disconnectDevice() ?? false;
   },
 
   sendGamepadReport(

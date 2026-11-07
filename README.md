@@ -153,13 +153,18 @@ Setelah server di laptop menyala dan aplikasi terpasang di HP:
 Jika Anda ingin menyambungkan HP langsung ke laptop via Bluetooth murni tanpa membuka server:
 
 1. Pastikan Bluetooth aktif di Laptop dan di HP Anda.
-2. Buka aplikasi **PS Controller** di HP.
-3. Tap status koneksi di bagian atas $\rightarrow$ pilih tab **Bluetooth HID (Direct)**.
-4. Tap tombol **"Aktifkan Mode Gamepad"**, lalu tap **"Buat HP Terlihat (Pairing)"**.
+2. Buka aplikasi **PS Controller** di HP (aplikasi otomatis berada di mode **Bluetooth HID Direct**).
+3. Tap status koneksi di bagian atas (atau ikon koneksi) $\rightarrow$ pastikan berada di tab **Bluetooth HID (Direct)**.
+4. Tap tombol **"Aktifkan Stik & Jadikan Terlihat"** (izinkan prompt izin jika muncul).
 5. Di Laptop Anda:
    * Buka **Settings** $\rightarrow$ **Bluetooth & devices** $\rightarrow$ **Add device** $\rightarrow$ **Bluetooth**.
-   * Pilih perangkat yang bernama **"Wireless Controller"**.
-6. Setelah status berpasangan (*Paired*), game di laptop akan langsung membaca HP Anda sebagai Gamepad Bluetooth standar.
+   * Pilih perangkat dengan nama **[Nama HP Anda]** atau **"Wireless Controller"** (ikon Game Controller).
+6. **⚠️ PENTING (Solusi jika gagal / tidak mau terhubung):**
+   * Jika laptop Anda sebelumnya pernah dipasangkan (*paired*) dengan HP ini (misal untuk transfer file atau Phone Link), Windows mengingat HP Anda sebagai ponsel biasa dan bukan stik game.
+   * **Solusinya**: Buka Pengaturan Bluetooth di Windows $\rightarrow$ cari nama HP Anda $\rightarrow$ klik titik tiga $\rightarrow$ pilih **"Remove device" (Hapus perangkat)** terlebih dahulu.
+   * Setelah dihapus di Windows, lakukan pairing ulang seperti langkah 4 & 5.
+7. **Koneksi Cepat (Bila sudah pernah Paired):**
+   * Buka menu koneksi di aplikasi HP $\rightarrow$ pada daftar **"Perangkat Laptop Paired (Tersimpan)"**, cukup klik tombol **[Hubungkan]** di samping nama laptop Anda!
 
 ---
 

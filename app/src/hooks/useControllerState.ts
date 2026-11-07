@@ -49,7 +49,7 @@ export function useControllerState() {
   const [buttons, setButtons] = useState<ButtonsState>(INITIAL_BUTTONS);
   const [axes, setAxes] = useState<GamepadAxes>(INITIAL_AXES);
 
-  const [mode, setMode] = useState<ConnectionMode>('pc_server'); // Default to PC Server since user plays PES on laptop
+  const [mode, setMode] = useState<ConnectionMode>('bluetooth'); // Default to Direct Bluetooth HID Gamepad
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [targetDevice, setTargetDevice] = useState<string>('');
